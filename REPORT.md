@@ -924,8 +924,49 @@ deploy-vm | SUCCESS => {
     "changed": false,
     "ping": "pong"
 }
+base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git add .
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git commit -m "update final_hw 1.3"
+[main 848d84b] update final_hw 1.3
+ 4 files changed, 313 insertions(+)
+ create mode 100644 screenshots/image-3.png
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push origin main
+Перечисление объектов: 18, готово.
+Подсчет объектов: 100% (17/17), готово.
+При сжатии изменений используется до 2 потоков
+Сжатие объектов: 100% (9/9), готово.
+Запись объектов: 100% (10/10), 349.45 KiB | 1.20 MiB/s, готово.
+Total 10 (delta 4), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
+To github.com:ln-247/audit_svc.git
+   2eae8e2..848d84b  main -> main
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git tag -a v0.1.0 -m "Release v0.1.0"
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab v0.1.0
+Перечисление объектов: 33, готово.
+Подсчет объектов: 100% (32/32), готово.
+При сжатии изменений используется до 2 потоков
+Сжатие объектов: 100% (25/25), готово.
+Запись объектов: 100% (26/26), 2.67 MiB | 2.07 MiB/s, готово.
+Total 26 (delta 10), reused 0 (delta 0), pack-reused 0 (from 0)
+To http://gitlab.localtest.me:8929/demo/audit-svc.git
+ * [new tag]         v0.1.0 -> v0.1.0
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push origin main v0.1.0
+Перечисление объектов: 1, готово.
+Подсчет объектов: 100% (1/1), готово.
+Запись объектов: 100% (1/1), 175 bytes | 175.00 KiB/s, готово.
+Total 1 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To github.com:ln-247/audit_svc.git
+ * [new tag]         v0.1.0 -> v0.1.0
 ```
 
+Добавила тег v0.1.0
+
+![alt text](screenshots/image-4.png)
+
+![alt text](screenshots/image-5.png)
+
+Пункт 1.3 пока выполнен частично. К проверке полного пайплайна вернемся после подготовки БД из задания 2 и настройки развертывания из задания 3.
+
+На данный момент публикация проверена, раннер развертывания зарегистрирован, Ansible установлен и проверен.
 
 ### 2. База данных и секреты
 
