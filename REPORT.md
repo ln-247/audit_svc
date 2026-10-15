@@ -559,8 +559,8 @@ Configuration (with the authentication token) was saved in "/etc/gitlab-runner/c
 ==> Готово
 
 
-GitLab:   http://gitlab.localtest.me:8929/demo        root / Zq8-Mirt-Volg-4417,  dev1 / Wn3-Brisk-Tolm-5823
-Harbor:   https://harbor.localtest.me:8443/harbor/projects   admin / Lab4-Harbor-2026
+GitLab:   http://gitlab.localtest.me:8929/demo        
+Harbor:   https://harbor.localtest.me:8443/harbor/projects   
 Рабочие копии: /home/user/vs_code/devops2_hw/stand_final_hw/work/{counter-frontend,counter-backend,templates,counter-deploy}
 Токен root для API/glab: /home/user/vs_code/devops2_hw/stand_final_hw/.state/gitlab-root-token.txt
 ```
@@ -621,7 +621,7 @@ To http://gitlab.localtest.me:8929/demo/audit-svc.git
 
 
 
-### 2. База данных и секретыp
+### 2. База данных и секреты
 
 #### 1. PostgreSQL
 
