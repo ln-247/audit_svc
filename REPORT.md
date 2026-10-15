@@ -568,8 +568,9 @@ Harbor:   https://harbor.localtest.me:8443/harbor/projects   admin / Lab4-Harbor
 Подняли контейнеры стенда, включая GitLab и Harbor и настроили их
 
 Зайдем на GitLab с паролем для root из вывода и создадим отдельный проект для audit-svc
-Затем выльем все на гитхаб и гитлаб. Для гитлаба нужно было ввести логин и пароль из вывода для root
+Затем выльем все на гитхаб и гитлаб. Для гитлаба нужно было ввести логин и пароль из вывода для root во всплывающем поле ввода 
 ```
+
 (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git add .
 (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git commit -m "update final_hw 1.2"
 [main 3c9a41f] update final_hw 1.2
@@ -596,10 +597,30 @@ To http://gitlab.localtest.me:8929/demo/audit-svc.git
  * [new branch]      main -> main
 ```
 
+Скриншот общий
+
+![gitlab_main](screenshots/gitlab_main.png)
+
+Скриншот результата для пайплайна
+
+![Скриншот результата для пайплайна](screenshots/main_pipeline_5.png)
+
+Тесты (poetry run pytest, отчёт JUnit) (пояснения)
+В задаче Run Tests выполняется команда poetry run pytest --junitxml python.junit.xml. Она запускает шесть тестов из tests/test_main.py, которые проверяют работу с событиями, обработку некорректных данных, метрики, перечитывание конфигурации и поведение при недоступности базы. Тесты используют имитацию хранилища FakeStorage без настоящей PostgreSQL. Все шесть тестов прошли успешно!
+![alt text](screenshots/image-2.png)
+
+Образ опубликован в Harbor
+
+![alt text](screenshots/image.png)
+
+Успешная отправка образа harbor.localtest.me:8443/demo/audit-svc:main_f8718e08 в Harbor, завершилось со статусом Job succeeded
+
+![alt text](screenshots/image-1.png)
+
 
 #### 3. Пайплайн на защищённом теге
 
-### 2. База данных и секреты
+### 2. База данных и секретыp
 
 #### 1. PostgreSQL
 
