@@ -47,8 +47,8 @@ permission denied while trying to connect to the docker API at unix:///var/run/d
 (.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ sudo usermod -aG docker user
 (.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ newgrp docker
 ```
-Попробуем создать docker-образ приложения
 
+Попробуем создать docker-образ приложения
 ```
 (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker build -t audit-svc:local .
 DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
@@ -415,6 +415,160 @@ uid=65534(nobody) gid=65534(nogroup) groups=65534(nogroup)
 Все проверки прошли успешно. Контейнер работает от nobody, и все три команды присутствуют в образе!
 
 #### 2. Пайплайн на ветке по умолчанию
+
+Пояснения. В этом пункте мы настроиваем автоматическую проверку и сборку нашего проекта. Я меняю код, делаю коммит и отправляю его в main. 
+После этого автоматически выполнятся
+- тесты и здесь раннер запускает poetry run pytest. Результаты сохраняются ещё и в формате JUnit, чтобы GitLab мог показать, какие тесты прошли и какие упали.
+- если тесты прошли, по подготовленному Dockerfile соберется Docker-образ
+- образ отправится в Harbor
+
+Выбрала первый вариант платформы. Расширила оперативную память виртуальной машины для нее до 12ГБ. Проверим доступную память на самой Ubuntu
+```
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ free -h
+               всего        занят        своб      общая  буф/врем.   доступно
+Память:         12Gi       2,5Gi       6,7Gi       187Mi       3,7Gi       9,9Gi
+Подкачка:      3,8Gi          0B       3,8Gi
+```
+Доступно 9,9 ГБ и подкачка не используется
+
+Перейдем в папку со стендом и запустим скрипт подготовки, который проверит окружение, проверит сертиикаты и утилиты, скачает образ и соберет образ deploy-vm
+
+```
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ cd ~/vs_code/devops2_hw/stand_final_hw
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/stand_final_hw$ ./scripts/00-prereqs.sh
+==> Проверка окружения
+xxx Не найдена утилита npm — установите её и запустите скрипт снова
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/stand_final_hw$ sudo apt install npm
+```
+Я не стала вставлять весь лог скачивания менеджера пакетов для JavaScript...
+
+```
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/stand_final_hw$ ./scripts/00-prereqs.sh
+==> Проверка окружения
+==> Собственный УЦ и сертификат для Harbor
+.+............+.......+...+..+......+..........+.....+.+.....+.+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*.+..........+..+...+.+........+...............+...+...+.+.....+.+..+...+....+.....+.........+....+..+...............+...+.+.....+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*...+...+.......+......+.....+....+...+......+.....+..........+......+.....+......+..................+....+..+....+......+.....+......+............+......+.+.....+....+............+...+.........+........+....+..............+.........+...+....+...+..................+.......................+..........+............+.....+....+..................+..+....+.........+........+...+................+...+...+..............+...+.+..+..........+..............+.+........+.........+.+......+...+....................+.......+.....+..........+.........+......+......+..+...+...+.......+..................+..+.............+..+..................+...............+...................+..+.+..+.......+.........+..+..........+..+.....................+.......+..+.......+.....+..........+.........+.....+.+...+.......................+.......+.....+.+.........+.....+......+.......+..+.+.....+......+...+.......+...............+.....+......+.......+.................+.............+.......................+.......+..+..........+.....+.+...+..+.......+...........+.+.....+.+........+.......+..+.+.................+.......+...........+.+.....+.........+.........+.......+........+...+..........+...+..+...+..........+...........+......+...+....+......+.....+.+.....+.+..............+....+..+.......+..+...+...+...+....+..+...............+...+...+....+...+..+...+.......+......+..+...............+.+..........................+...+............+.+..............+.....................+.............+......+...+............+......+..+...+...+.........+...+.............+.........+.....+..................+...+....+...+..+...+..................+.+...........+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+....+...+..+...+......+.+.....+......+...+....+...+..+.+..............+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*.+......+......+..+...+...+....+..+.+.....+.......+........+....+.....+....+.....+.......+........+.+...+.................+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*....+.+.........+.........+.....+.......+..+............+....+.....+....+...........+.+......+...+..............+..........+...............+..+....+.........+..+.............................................+.+...+.....+.........+.+............+.........+...+...........+......+....+..+.......+.....+.............+.........+.....+.........+........................+.............+........+......+...+.+..+....+.........+.................+....+.........+...........+.+..+.+..+.......+..+......+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+-----
+.........+..+......+.......+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*...+....+..+...+....+..+.+..............+...+.+..+..........+..+.+......+...+..+.+.................+......+.......+.....+...+....+........+..........+..+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*......+............+.........+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+.+.+...+.....+....+.....+.+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*...+...+..+............+.+..+....+........+.......+...+......+.....+.........+.......+......+...+..+.......+..+...+...+...+.......+.....+.......+..+.+..+............+...+.+.....+.........+.+.....+......+..........+........+.+..+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*......+.........+..+........................+.........+.......+...+......+.....+.......+...+..............+...............+...+......................+...+.....+.......+.....+...+............+..........+...........+......+...................+.........+...+........+......+.+...+.........+.....+............+...+.+......+.........+..............+...............+...+...+.+.....+......+.......+..+.............+...+...+..+............+.+.........+.................+.+.........+......+..+.......+.....................+........+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+-----
+Certificate request self-signature ok
+subject=CN = harbor.localtest.me
+==> glab (официальный CLI GitLab) → ~/.local/bin
+glab 1.123.0 (5686d7484)
+==> gitlab-ci-local → ~/.local/bin
+
+added 1 package in 1s
+4.76.1
+==> Установщик Harbor v2.15.2
+==> Harbor: /home/user/vs_code/devops2_hw/stand_final_hw/.state/harbor/harbor.yml
+5:hostname: harbor.localtest.me
+10:  port: 8081
+15:  port: 8443
+17:  certificate: /home/user/vs_code/devops2_hw/stand_final_hw/.state/certs/harbor.crt
+18:  private_key: /home/user/vs_code/devops2_hw/stand_final_hw/.state/certs/harbor.key
+66:data_volume: /home/user/vs_code/devops2_hw/stand_final_hw/.state/harbor-data
+172:    location: /home/user/vs_code/devops2_hw/stand_final_hw/.state/harbor-logs
+==> Образы стенда
+[+] Pulling 27/27
+ ✔ runner-docker Pulled                                                                                                              34.0s 
+ ✔ webhook-echo Pulled                                                                                                               29.7s 
+ ✔ gitlab Pulled                                                                                                                    235.3s 
+WARN[0000] Docker Compose is configured to build using Bake, but buildx isn't installed 
+[+] Building 241.8s (11/11) FINISHED                                                                                        docker:default
+ => [deploy-vm internal] load build definition from Dockerfile                                                                        0.1s
+ => => transferring dockerfile: 1.37kB                                                                                                0.0s
+ => [deploy-vm internal] load metadata for docker.io/library/ubuntu:24.04                                                             3.6s
+ => [deploy-vm internal] load .dockerignore                                                                                           0.6s
+ => => transferring context: 2B                                                                                                       0.0s
+ => [deploy-vm 1/5] FROM docker.io/library/ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55       8.1s
+ => => resolve docker.io/library/ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55                 0.9s
+ => => sha256:a60ef8ec184edb5ed91f5983f00261359fb2fe20f603e8d488b9477d32fcad70 29.76MB / 29.76MB                                      3.6s
+ => => extracting sha256:a60ef8ec184edb5ed91f5983f00261359fb2fe20f603e8d488b9477d32fcad70                                             2.0s
+ => [deploy-vm internal] load build context                                                                                           2.0s
+ => => transferring context: 1.59kB                                                                                                   0.0s
+ => [deploy-vm 2/5] RUN apt-get update  && apt-get install --yes --no-install-recommends ca-certificates curl gnupg git iptables pr  54.4s
+ => [deploy-vm 3/5] RUN curl -L "https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh" | bash  && a  117.6s
+ => [deploy-vm 4/5] COPY template.toml /etc/gitlab-runner/template.toml                                                               0.2s
+ => [deploy-vm 5/5] COPY entrypoint.sh /usr/local/bin/entrypoint.sh                                                                   0.3s
+ => [deploy-vm] exporting to image                                                                                                   56.0s
+ => => exporting layers                                                                                                              45.2s
+ => => exporting manifest sha256:aca6c1d4836d0bbbd474367aa5c6bb73ecbd44fe77b9df1b3d0d32e45c4f664a                                     0.0s
+ => => exporting config sha256:5bf48cc7d8b8decf7166aea93773d17b1381f3f2e354544a1304ed423d2f14e4                                       0.1s
+ => => exporting attestation manifest sha256:04ec4161d83982aafc3d1527fa980ed7806f222cea0246130d360a92c46c4fc4                         0.1s
+ => => exporting manifest list sha256:92292d17b361913b9c90cac63813331a39b872dbe78c51cddb8432dee51728fd                                0.0s
+ => => naming to docker.io/lecture4/deploy-vm:latest                                                                                  0.0s
+ => => unpacking to docker.io/lecture4/deploy-vm:latest                                                                              10.5s
+ => [deploy-vm] resolving provenance for metadata file                                                                                0.0s
+[+] Building 1/1
+ ✔ deploy-vm  Built                                                                                                                   0.0s 
+gcr.io/kaniko-project/executor:v1.23.2-debug
+docker.io/library/node:22-bookworm
+docker.io/library/node:22-slim
+docker.io/library/python:3.11-slim-bookworm
+docker.io/library/alpine:3.22
+docker.io/alpine/git:2.54.0
+docker.io/library/nginx:1.28
+docker.io/library/docker:29-cli
+==> Подготовка завершена. Дальше: scripts/10-up.sh
+
+```
+Раньше не было такой проблемы. Теперь при установке последнего скрипта сохранились не все строки в терминале :(  В отчет вставила последние строки.
+```
+==> Жду: Harbor https://harbor.localtest.me:8443 (до 300 с)
+==> Готово: Harbor https://harbor.localtest.me:8443 (11 с)
+==> Жду: GitLab http://gitlab.localtest.me:8929 (первый старт — 3–5 минут) (до 900 с)
+==> Готово: GitLab http://gitlab.localtest.me:8929 (первый старт — 3–5 минут) (141 с)
+
+GitLab:  http://gitlab.localtest.me:8929        root / Zq8-Mirt-Volg-4417
+Harbor:  https://harbor.localtest.me:8443      admin / Lab4-Harbor-2026
+Первый раз после этого запустите scripts/20-bootstrap.sh
+```
+Но все запустилось корректно
+```
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/stand_final_hw$ ./scripts/20-bootstrap.sh
+==> Создаю personal access token для root (gitlab-rails runner, ~30 с)
+Токен root работает: root
+==> Настройки инстанса: без Auto DevOps и регистрации, webhook-и в локальную сеть разрешены
+==> Пользователь dev1
+==> Группа demo
+==> Проект demo/templates
+==> Код → demo/templates (без запуска пайплайна)
+==> Проект demo/counter-frontend
+==> Код → demo/counter-frontend (без запуска пайплайна)
+==> Проект demo/counter-backend
+==> Код → demo/counter-backend (без запуска пайплайна)
+==> Проект demo/counter-deploy
+==> Код → demo/counter-deploy (без запуска пайплайна)
+==> Защищённые теги v* в counter-frontend
+==> Защищённые теги v* в counter-backend
+==> Harbor: проект demo (автосканирование при push)
+==> Harbor: robot-аккаунт gitlab (push/pull в проекте demo)
+==> Переменная группы HARBOR_ROBOT_USER (masked=false, protected=false)
+==> Переменная группы HARBOR_ROBOT_SECRET (masked=true, protected=true)
+==> Project access token ci-bot в counter-deploy (Maintainer, write_repository)
+==> Переменная группы DEPLOY_TOKEN (masked=true, protected=true)
+==> Общий раннер (instance, docker executor)
+Runtime platform                                    arch=amd64 os=linux pid=20 revision=3c39fceb version=19.4.1
+Running in system-mode.                            
+                                                   
+Verifying runner... is valid                        correlation_id=01M4ZBAKBPZB2MCE1JBTAA6H3D runner=X46Qvmz5Y runner_name=runner-docker
+Runner registered successfully. Feel free to start it, but if it's running already the config should be automatically reloaded!
+ 
+Configuration (with the authentication token) was saved in "/etc/gitlab-runner/config.toml" 
+==> Готово
+
+
+GitLab:   http://gitlab.localtest.me:8929/demo        root / Zq8-Mirt-Volg-4417,  dev1 / Wn3-Brisk-Tolm-5823
+Harbor:   https://harbor.localtest.me:8443/harbor/projects   admin / Lab4-Harbor-2026
+Рабочие копии: /home/user/vs_code/devops2_hw/stand_final_hw/work/{counter-frontend,counter-backend,templates,counter-deploy}
+Токен root для API/glab: /home/user/vs_code/devops2_hw/stand_final_hw/.state/gitlab-root-token.txt
+```
+
+Подняли контейнеры стенда, включая GitLab и Harbor и настроили их
+
+Зайдем на GitLab с паролем для root из вывода и создадим отдельный проект для audit-svc
+
 
 #### 3. Пайплайн на защищённом теге
 
