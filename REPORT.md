@@ -520,8 +520,8 @@ docker.io/library/docker:29-cli
 ==> Жду: GitLab http://gitlab.localtest.me:8929 (первый старт — 3–5 минут) (до 900 с)
 ==> Готово: GitLab http://gitlab.localtest.me:8929 (первый старт — 3–5 минут) (141 с)
 
-GitLab:  http://gitlab.localtest.me:8929        root / Zq8-Mirt-Volg-4417
-Harbor:  https://harbor.localtest.me:8443      admin / Lab4-Harbor-2026
+GitLab:  http://gitlab.localtest.me:8929        
+Harbor:  https://harbor.localtest.me:8443      
 Первый раз после этого запустите scripts/20-bootstrap.sh
 ```
 Но все запустилось корректно
@@ -617,8 +617,9 @@ To http://gitlab.localtest.me:8929/demo/audit-svc.git
 
 ![alt text](screenshots/image-1.png)
 
-
 #### 3. Пайплайн на защищённом теге
+
+
 
 ### 2. База данных и секретыp
 
