@@ -1,0 +1,19 @@
+include: #подключим готовые задачи из проекта demo/templates, который создал bootstrap
+  - project: demo/templates
+    ref: main
+    file:
+      - pipelines/python_poetry_docker.yml
+
+variables:
+  POETRY_VERSION: "2.5.1"
+  DOCKERFILE: "Dockerfile"
+
+.script__poetry_install:
+  - pip install --quiet "poetry==$POETRY_VERSION" "poetry-plugin-export==1.10.0"
+  - poetry install --no-interaction
+
+Deploy Job: #обновляет counter-deploy, но нам нужны пока только тесты, сборка и публикация       
+  rules:
+    - when: never
+
+

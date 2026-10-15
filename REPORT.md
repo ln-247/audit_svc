@@ -568,6 +568,33 @@ Harbor:   https://harbor.localtest.me:8443/harbor/projects   admin / Lab4-Harbor
 Подняли контейнеры стенда, включая GitLab и Harbor и настроили их
 
 Зайдем на GitLab с паролем для root из вывода и создадим отдельный проект для audit-svc
+Затем выльем все на гитхаб и гитлаб. Для гитлаба нужно было ввести логин и пароль из вывода для root
+```
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git add .
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git commit -m "update final_hw 1.2"
+[main 3c9a41f] update final_hw 1.2
+ 1 file changed, 155 insertions(+), 1 deletion(-)
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push
+Перечисление объектов: 5, готово.
+Подсчет объектов: 100% (5/5), готово.
+При сжатии изменений используется до 2 потоков
+Сжатие объектов: 100% (3/3), готово.
+Запись объектов: 100% (3/3), 4.92 KiB | 4.92 MiB/s, готово.
+Total 3 (delta 2), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (2/2), completed with 2 local objects.
+To github.com:ln-247/audit_svc.git
+   1012154..3c9a41f  main -> main
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git remote add gitlab http://gitlab.localtest.me:8929/demo/audit-svc.git
+(base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab main
+Перечисление объектов: 42, готово.
+Подсчет объектов: 100% (42/42), готово.
+При сжатии изменений используется до 2 потоков
+Сжатие объектов: 100% (37/37), готово.
+Запись объектов: 100% (42/42), 69.38 KiB | 13.88 MiB/s, готово.
+Total 42 (delta 4), reused 0 (delta 0), pack-reused 0 (from 0)
+To http://gitlab.localtest.me:8929/demo/audit-svc.git
+ * [new branch]      main -> main
+```
 
 
 #### 3. Пайплайн на защищённом теге
