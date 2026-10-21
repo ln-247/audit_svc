@@ -1136,7 +1136,54 @@ deploy-vm                  : ok=6    changed=0    unreachable=0    failed=0    s
 
 #### 4. Ключ ansible-vault в CI
 
+Сощздала переменную ANSIBLE_VAULT_PASSWORD_FILE типа File с параметрами Masked и Protected в настройках Ansible Vault
+Также настроила  в .gitlab-ci.yml настроен автоматический запуск нашего плейбука на deploy-vm. Пароль для расшифровки vault.yml берется из переменной GitLab и передаётся Ansible через --vault-password-file
+Перед созданием тега запушим все на гитхаб и на гитлаб. Затем создадим тег
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git add .
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git commit -m "update final_hw 2.3-2.4"
+[main 6aa2f66] update final_hw 2.3-2.4
+ 4 files changed, 75 insertions(+), 12 deletions(-)
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push origin main
+Перечисление объектов: 21, готово.
+Подсчет объектов: 100% (21/21), готово.
+При сжатии изменений используется до 2 потоков
+Сжатие объектов: 100% (9/9), готово.
+Запись объектов: 100% (11/11), 2.50 KiB | 2.50 MiB/s, готово.
+Total 11 (delta 4), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
+To github.com:ln-247/audit_svc.git
+   2be6afc..6aa2f66  main -> main
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab main
+Перечисление объектов: 38, готово.
+Подсчет объектов: 100% (37/37), готово.
+При сжатии изменений используется до 2 потоков
+Сжатие объектов: 100% (25/25), готово.
+Запись объектов: 100% (27/27), 588.35 KiB | 28.02 MiB/s, готово.
+Total 27 (delta 14), reused 0 (delta 0), pack-reused 0 (from 0)
+To http://gitlab.localtest.me:8929/demo/audit-svc.git
+   f8718e0..6aa2f66  main -> main
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git tag v0.2.0
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab v0.2.0
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To http://gitlab.localtest.me:8929/demo/audit-svc.git
+ * [new tag]         v0.2.0 -> v0.2.0
 
+```
+Задача Deploy Job упала с ошибкой
+![alt text](screenshots/image-6.png)
+
+Здесь раннеру не хватило прав создать папку для скачивания репозитория. Создадим ее и назначим gitlab-runner ее владельцем
+```
+docker exec -u root deploy-vm install -d -o gitlab-runner -g gitlab-runner /data/gitlab-runner
+```
+
+Задача завершилась успешно
+![alt text](screenshots/image-7.png)
+
+![alt text](screenshots/image-8.png)
+
+Плейбук на deploy-vm успешно запустился (на теге v0.2.0). Теперь пароль Vault из переменной GitLab можно получить без ручного ввода.
 
 ### 3. Развёртывание из CI и перечитывание конфига
 
