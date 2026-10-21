@@ -969,8 +969,41 @@ To github.com:ln-247/audit_svc.git
 На данный момент публикация проверена, раннер развертывания зарегистрирован, Ansible установлен и проверен.
 
 ### 2. База данных и секреты
-
 #### 1. PostgreSQL
+
+Добавила плейбук audit-svc.play.yml который создает том, сеть, контейнер. Здесь порт наружу не публикуется и no_log нужен, чтобы пароль не попал в вывод
+
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker cp deploy deploy-vm:/data/audit-svc/
+Successfully copied 10.8kB to deploy-vm:/data/audit-svc/
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -it -u gitlab-runner -w /data/audit-svc/deploy deploy-vm ansible-playbook audit-svc.play.yml
+Введите пароль для пользователя postgres: 
+
+PLAY [Run PostgreSQL] **********************************************************************************************************************************************************
+
+TASK [Gathering Facts] *********************************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create PostgreSQL data volume] *******************************************************************************************************************************************
+changed: [deploy-vm]
+
+TASK [Start PostgreSQL container] **********************************************************************************************************************************************
+changed: [deploy-vm]
+
+PLAY RECAP *********************************************************************************************************************************************************************
+deploy-vm                  : ok=3    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+```
+Плейбук выполнился успешно, том и контейнер создались, changed=2, failed=0
+Теперь проверим, что PostgreSQL принимает подключения, данные подключены к нужному тому, а порт не опубликован
+
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker exec audit-postgres pg_isready -U postgres -d postgres
+/var/run/postgresql:5432 - accepting connections
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker inspect audit-postgres --format '{{range .Mounts}}{{.Type}} {{.Name}} -> {{.Destination}}{{end}}'
+volume audit_postgres_data -> /var/lib/postgresql/data
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker port audit-postgres
+```
+После последней команды ничего не вывелось, она должна была вывести опубликованные порты, но у нас их нет.
 
 #### 2. БД и пользователь
 

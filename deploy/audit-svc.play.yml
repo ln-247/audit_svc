@@ -1,0 +1,24 @@
+- name: Run PostgreSQL
+  hosts: deploy-vm
+
+  vars_prompt:
+    - name: postgres_admin_password
+      prompt: "Введите пароль для пользователя postgres"
+      private: true
+
+  tasks:
+    - name: Create PostgreSQL data volume
+      community.docker.docker_volume:
+        name: audit_postgres_data
+        state: present
+
+    - name: Start PostgreSQL container
+      community.docker.docker_container:
+        name: audit-postgres
+        image: postgres:17
+        state: started
+        env:
+          POSTGRES_PASSWORD: "{{ postgres_admin_password | string }}"
+        volumes:
+          - audit_postgres_data:/var/lib/postgresql/data
+      no_log: true
