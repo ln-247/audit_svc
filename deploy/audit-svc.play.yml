@@ -6,6 +6,10 @@
       prompt: "Введите пароль для пользователя postgres"
       private: true
 
+    - name: audit_svc_password
+      prompt: "Придумайте пароль пользователя audit_svc"
+      private: true
+
   tasks:
     - name: Create PostgreSQL data volume
       community.docker.docker_volume:
@@ -21,4 +25,34 @@
           POSTGRES_PASSWORD: "{{ postgres_admin_password | string }}"
         volumes:
           - audit_postgres_data:/var/lib/postgresql/data
+      register: postgres_container
       no_log: true
+
+    - name: Wait for PostgreSQL #проверка готов ли PostgreSQL принимать подключения
+      ansible.builtin.command:
+        cmd: docker exec audit-postgres pg_isready -h 127.0.0.1 -U postgres -d postgres
+      register: postgres_ready
+      until: postgres_ready.rc == 0
+      retries: 20
+      delay: 2
+      changed_when: false
+
+    - name: Create PostgreSQL user
+      community.postgresql.postgresql_user:
+        name: audit_svc
+        password: "{{ audit_svc_password | string }}"
+        state: present
+        login_host: "{{ postgres_container.container.NetworkSettings.Networks.bridge.IPAddress }}"
+        login_user: postgres
+        login_password: "{{ postgres_admin_password | string }}"
+      no_log: true
+
+    - name: Create database
+      community.postgresql.postgresql_db:
+        name: audit
+        owner: audit_svc
+        state: present
+        login_host: "{{ postgres_container.container.NetworkSettings.Networks.bridge.IPAddress }}"
+        login_user: postgres
+        login_password: "{{ postgres_admin_password | string }}"
+      no_log: true  
