@@ -1,15 +1,6 @@
 - name: Run PostgreSQL
   hosts: deploy-vm
 
-  vars_prompt:
-    - name: postgres_admin_password
-      prompt: "Введите пароль для пользователя postgres"
-      private: true
-
-    - name: audit_svc_password
-      prompt: "Придумайте пароль пользователя audit_svc"
-      private: true
-
   tasks:
     - name: Create PostgreSQL data volume
       community.docker.docker_volume:

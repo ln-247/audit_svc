@@ -1080,9 +1080,63 @@ deploy-vm                  : ok=6    changed=0    unreachable=0    failed=0    s
 Повторный запуск плейбука завершился успешно. Ура!
 
 #### 3. Секреты
+Создадим файл и зашифруем там наши пароли, также установим пароль для Ansible Vault
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ EDITOR="code --wait" ansible-vault create deploy/inventories/prom/group_vars/all/vault.yml
+New Vault password: 
+Confirm New Vault password: 
+```
+Проверим, что файл зашифровался
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ head -n 1 deploy/inventories/prom/group_vars/all/vault.yml
+$ANSIBLE_VAULT;1.1;AES256
+```
+Файл зашифрован
+Внесла изменения в плейбук, удалила запросы паролей, теперь Ansible возьмет их из group_vars/all/vault.yml
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -it -u gitlab-runner -w /data/audit-svc/deploy deploy-vm ansible-playbook audit-svc.play.yml --ask-vault-pass
+Vault password: 
+
+PLAY [Run PostgreSQL] **********************************************************************************************************************************************************
+ERROR! an error occurred while trying to read the file '/data/audit-svc/deploy/inventories/prom/group_vars/all/vault.yml': [Errno 13] Permission denied: b'/data/audit-svc/deploy/inventories/prom/group_vars/all/vault.yml'. [Errno 13] Permission denied: b'/data/audit-svc/deploy/inventories/prom/group_vars/all/vault.yml'
+```
+
+Случилась ошибка прав доступа. Назначим gitlab-runner владельцем файла vault.yml внутри deploy-vm и попробуем снова
+```
+docker exec -u root deploy-vm chown gitlab-runner:gitlab-runner /data/audit-svc/deploy/inventories/prom/group_vars/all/vault.yml
+
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -it -u gitlab-runner -w /data/audit-svc/deploy deploy-vm ansible-playbook audit-svc.play.yml --ask-vault-pass
+Vault password: 
+
+PLAY [Run PostgreSQL] **********************************************************************************************************************************************************
+
+TASK [Gathering Facts] *********************************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create PostgreSQL data volume] *******************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Start PostgreSQL container] **********************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Wait for PostgreSQL] *****************************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create PostgreSQL user] **************************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create database] *********************************************************************************************************************************************************
+ok: [deploy-vm]
+
+PLAY RECAP *********************************************************************************************************************************************************************
+deploy-vm                  : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+```
+Все завершилось успешно!
 
 
 #### 4. Ключ ansible-vault в CI
+
+
 
 ### 3. Развёртывание из CI и перечитывание конфига
 

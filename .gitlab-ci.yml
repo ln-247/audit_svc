@@ -13,7 +13,17 @@ variables:
   - poetry install --no-interaction
 
 Deploy Job: #обновляет counter-deploy, но нам нужны пока только тесты, сборка и публикация       
-  rules:
-    - when: never
-
+  stage: deploy
+  tags:
+    - deploy
+  variables:
+    GIT_STRATEGY: fetch #чтобы раннер получил исходники вместе с папкой deploy/ , скачать репозиторий с плейбуком
+  needs:
+    - job: Publish Package
+      artifacts: false #не скачивать файлы, которые задача Publish Package сохранила как артефакты
+  script:
+    - cd deploy
+    - ansible-playbook audit-svc.play.yml --vault-password-file "$ANSIBLE_VAULT_PASSWORD_FILE"
+  rules: #разрешить запуск только на защищенном теге 
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/ && $CI_COMMIT_REF_PROTECTED == "true"'
 
