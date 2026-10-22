@@ -46,4 +46,24 @@
         login_host: "{{ postgres_container.container.NetworkSettings.Networks.bridge.IPAddress }}"
         login_user: postgres
         login_password: "{{ postgres_admin_password | string }}"
-      no_log: true  
+      no_log: true
+
+    - name: Create audit-svc config
+      become: true
+      ansible.builtin.template:
+        src: templates/config.yaml.j2
+        dest: /data/audit-svc/config.yaml
+        owner: "65534" #пользователь nobody
+        group: "65534"
+        mode: "0600"
+      no_log: true
+    
+    - name: Run database migrations
+      ansible.builtin.command:
+        cmd: >-
+          docker run --rm
+          --entrypoint migrate
+          --volume /data/audit-svc/config.yaml:/etc/audit-svc/config.yaml:ro
+          harbor.localtest.me:8443/demo/audit-svc:v0.2.0
+      register: migration_result
+      changed_when: "'done: 0 applied,' not in migration_result.stderr"

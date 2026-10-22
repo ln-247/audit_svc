@@ -1232,6 +1232,167 @@ Status: Downloaded newer image for harbor.localtest.me:8443/demo/audit-svc:v0.2.
 harbor.localtest.me:8443/demo/audit-svc:v0.2.0
 ```
 
+Для запуска миграций создала шаблон deploy/templates/config.yaml.j2 с параметрами подключения к PostgreSQL. Адрес контейнера и пароль из Vault подставляются Ansible. Добавила в плейбук задачи создания конфигурационного файла и запуска команды migrate во временном контейнере из скачанного образа
+
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -it -u gitlab-runner -w /data/audit-svc/deploy deploy-vm ansible-playbook audit-svc.play.yml --ask-vault-pass
+Vault password: 
+
+PLAY [Run PostgreSQL] **********************************************************************************************************************************************************
+ERROR! an error occurred while trying to read the file '/data/audit-svc/deploy/inventories/prom/group_vars/all/vault.yml': [Errno 13] Permission denied: b'/data/audit-svc/deploy/inventories/prom/group_vars/all/vault.yml'. [Errno 13] Permission denied: b'/data/audit-svc/deploy/inventories/prom/group_vars/all/vault.yml'
+```
+Опять :(
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -u root deploy-vm chown gitlab-runner:gitlab-runner /data/audit-svc/deploy/inventories/prom/group_vars/all/vault.yml
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -it -u gitlab-runner -w /data/audit-svc/deploy deploy-vm ansible-playbook audit-svc.play.yml --ask-vault-pass
+Vault password: 
+
+PLAY [Run PostgreSQL] **********************************************************************************************************************************************************
+
+TASK [Gathering Facts] *********************************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create PostgreSQL data volume] *******************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Start PostgreSQL container] **********************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Wait for PostgreSQL] *****************************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create PostgreSQL user] **************************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create database] *********************************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create audit-svc config] *************************************************************************************************************************************************
+fatal: [deploy-vm]: FAILED! => {"censored": "the output has been hidden due to the fact that 'no_log: true' was specified for this result"}
+
+PLAY RECAP *********************************************************************************************************************************************************************
+deploy-vm                  : ok=6    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -u gitlab-runner deploy-vm sudo -n id
+OCI runtime exec failed: exec failed: unable to start container process: exec: "sudo": executable file not found in $PATH
+```
+
+Еще обнаружилось что мы не разрешили gitlab-runner выполнять команды от root без запроса пароля :(
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -u root deploy-vm apt-get update
+Hit:1 http://archive.ubuntu.com/ubuntu noble InRelease
+Get:2 https://download.docker.com/linux/ubuntu noble InRelease [48.5 kB]
+Get:3 http://archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
+Get:4 http://security.ubuntu.com/ubuntu noble-security InRelease [126 kB]
+Get:5 http://archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
+Get:6 https://download.docker.com/linux/ubuntu noble/stable amd64 Packages [86.8 kB]
+Hit:7 https://packages.gitlab.com/runner/gitlab-runner/ubuntu noble InRelease
+Get:8 http://security.ubuntu.com/ubuntu noble-security/universe amd64 Packages [1549 kB]
+Get:9 http://security.ubuntu.com/ubuntu noble-security/main amd64 Packages [1411 kB]
+Get:10 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 Packages [2171 kB]
+Get:11 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 Packages [1733 kB]
+Fetched 7378 kB in 3s (2764 kB/s)
+Reading package lists...
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -u root deploy-vm apt-get install -y sudo
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  libapparmor1
+The following NEW packages will be installed:
+  libapparmor1 sudo
+0 upgraded, 2 newly installed, 0 to remove and 12 not upgraded.
+Need to get 1000 kB of archives.
+After this operation, 3678 kB of additional disk space will be used.
+Get:1 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libapparmor1 amd64 4.0.1really4.0.1-0ubuntu0.24.04.9 [51.5 kB]
+Get:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 sudo amd64 1.9.15p5-3ubuntu5.24.04.4 [949 kB]
+debconf: delaying package configuration, since apt-utils is not installed
+Fetched 1000 kB in 2s (658 kB/s)
+Selecting previously unselected package libapparmor1:amd64.
+(Reading database ... 33384 files and directories currently installed.)
+Preparing to unpack .../libapparmor1_4.0.1really4.0.1-0ubuntu0.24.04.9_amd64.deb ...
+Unpacking libapparmor1:amd64 (4.0.1really4.0.1-0ubuntu0.24.04.9) ...
+Selecting previously unselected package sudo.
+Preparing to unpack .../sudo_1.9.15p5-3ubuntu5.24.04.4_amd64.deb ...
+Unpacking sudo (1.9.15p5-3ubuntu5.24.04.4) ...
+Setting up libapparmor1:amd64 (4.0.1really4.0.1-0ubuntu0.24.04.9) ...
+Setting up sudo (1.9.15p5-3ubuntu5.24.04.4) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.9) ...
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -u root deploy-vm sh -c 'echo "gitlab-runner ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/gitlab-runner && chmod 0440 /etc/sudoers.d/gitlab-runner'
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -u gitlab-runner deploy-vm sudo -n id
+uid=0(root) gid=0(root) groups=0(root)
+```
+
+Теперь попробуем заново запустить плейбук
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -it -u gitlab-runner -w /data/audit-svc/deploy deploy-vm ansible-playbook audit-svc.play.yml --ask-vault-pass
+Vault password: 
+
+PLAY [Run PostgreSQL] *****************************************************************************************************************************************
+
+TASK [Gathering Facts] ****************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create PostgreSQL data volume] **************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Start PostgreSQL container] *****************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Wait for PostgreSQL] ************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create PostgreSQL user] *********************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create database] ****************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create audit-svc config] ********************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Run database migrations] ********************************************************************************************************************************
+changed: [deploy-vm]
+
+PLAY RECAP ****************************************************************************************************************************************************
+deploy-vm                  : ok=8    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -it -u gitlab-runner -w /data/audit-svc/deploy deploy-vm ansible-playbook audit-svc.play.yml --ask-vault-pass
+Vault password: 
+
+PLAY [Run PostgreSQL] *****************************************************************************************************************************************
+
+TASK [Gathering Facts] ****************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create PostgreSQL data volume] **************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Start PostgreSQL container] *****************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Wait for PostgreSQL] ************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create PostgreSQL user] *********************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create database] ****************************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Create audit-svc config] ********************************************************************************************************************************
+ok: [deploy-vm]
+
+TASK [Run database migrations] ********************************************************************************************************************************
+ok: [deploy-vm]
+
+PLAY RECAP ****************************************************************************************************************************************************
+deploy-vm                  : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+```
+Первый запуск применил миграции (changed=1), повторный завершился без изменений (ok=8, changed=0, failed=0). Ура!
+
+
+
 
 ### 3. Развёртывание из CI и перечитывание конфига
 

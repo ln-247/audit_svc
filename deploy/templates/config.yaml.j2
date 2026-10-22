@@ -1,0 +1,6 @@
+database:
+  host: "{{ postgres_container.container.NetworkSettings.Networks.bridge.IPAddress }}"
+  port: 5432
+  name: audit
+  user: audit_svc
+  password: {{ audit_svc_password | string | to_json }}
