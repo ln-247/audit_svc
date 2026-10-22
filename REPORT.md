@@ -606,7 +606,10 @@ To http://gitlab.localtest.me:8929/demo/audit-svc.git
 ![Скриншот результата для пайплайна](screenshots/main_pipeline_5.png)
 
 Тесты (poetry run pytest, отчёт JUnit) (пояснения)
-В задаче Run Tests выполняется команда poetry run pytest --junitxml python.junit.xml. Она запускает шесть тестов из tests/test_main.py, которые проверяют работу с событиями, обработку некорректных данных, метрики, перечитывание конфигурации и поведение при недоступности базы. Тесты используют имитацию хранилища FakeStorage без настоящей PostgreSQL. Все шесть тестов прошли успешно!
+В задаче Run Tests выполняется команда poetry run pytest --junitxml python.junit.xml. Она запускает шесть тестов из tests/test_main.py, которые проверяют работу с событиями, обработку некорректных данных, метрики, перечитывание конфигурации и поведение при недоступности базы. Тесты используют имитацию хранилища FakeStorage без настоящей PostgreSQL. 
+
+Все шесть тестов прошли успешно!
+
 ![alt text](screenshots/image-2.png)
 
 Образ опубликован в Harbor
@@ -885,7 +888,7 @@ ansible [core 2.16.3]
   jinja version = 3.1.2
   libyaml = True
 ```
-Подключим деплой-раннер,  исполнителя который будет запускать Ansible внутри deploy-vm  
+Подключим деплой-раннер исполнителя, который будет запускать Ansible внутри deploy-vm  
 Создала раннера в CI/CD Settings/Register runner. Здесь же хранится токен для раннера
 ```
 (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ read -rsp 'Вставь токен раннера и нажми Enter: ' AUDIT_RUNNER_TOKEN
@@ -1136,8 +1139,8 @@ deploy-vm                  : ok=6    changed=0    unreachable=0    failed=0    s
 
 #### 4. Ключ ansible-vault в CI
 
-Сощздала переменную ANSIBLE_VAULT_PASSWORD_FILE типа File с параметрами Masked и Protected в настройках Ansible Vault
-Также настроила  в .gitlab-ci.yml настроен автоматический запуск нашего плейбука на deploy-vm. Пароль для расшифровки vault.yml берется из переменной GitLab и передаётся Ansible через --vault-password-file
+Создала переменную ANSIBLE_VAULT_PASSWORD_FILE типа File с параметрами Masked и Protected в настройках Ansible Vault
+Также настроила  в .gitlab-ci.yml автоматический запуск нашего плейбука на deploy-vm. Пароль для расшифровки vault.yml берется из переменной GitLab и передаётся Ansible через --vault-password-file
 Перед созданием тега запушим все на гитхаб и на гитлаб. Затем создадим тег
 ```
 (.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git add .
@@ -1184,6 +1187,51 @@ docker exec -u root deploy-vm install -d -o gitlab-runner -g gitlab-runner /data
 ![alt text](screenshots/image-8.png)
 
 Плейбук на deploy-vm успешно запустился (на теге v0.2.0). Теперь пароль Vault из переменной GitLab можно получить без ручного ввода.
+
+Подготовим схему БД скриптом migrate из образа сервиса
+Сначала проверим есть ли образ сервиса внутри deploy-vm
+
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker image ls
+IMAGE         ID             DISK USAGE   CONTENT SIZE   EXTRA
+postgres:17   a63c1ea3f6a3        646MB          167MB   U    
+```
+
+Образ сервиса еще не скачан, скачаем его
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -it -u gitlab-runner deploy-vm docker login harbor.localtest.me:8443 --username admin
+Password: 
+
+WARNING! Your credentials are stored unencrypted in '/home/gitlab-runner/.docker/config.json'.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/go/credential-store/
+
+Login Succeeded
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -u gitlab-runner deploy-vm docker pull harbor.localtest.me:8443/demo/audit-svc:v0.2.0
+v0.2.0: Pulling from demo/audit-svc
+de67078d5dcc: Pulling fs layer
+11422d7ca1a4: Pulling fs layer
+5938c3a3cfef: Pulling fs layer
+fe9b55673e95: Pulling fs layer
+efd623ba8e53: Pulling fs layer
+35495e532414: Pulling fs layer
+efd623ba8e53: Download complete
+5938c3a3cfef: Download complete
+de67078d5dcc: Download complete
+35495e532414: Download complete
+11422d7ca1a4: Download complete
+fe9b55673e95: Download complete
+11422d7ca1a4: Pull complete
+5938c3a3cfef: Pull complete
+fe9b55673e95: Pull complete
+efd623ba8e53: Pull complete
+35495e532414: Pull complete
+de67078d5dcc: Pull complete
+Digest: sha256:a5f02c829e251c9180e44eb36fc0d8f7a3a5d1c62224fe205809b7868ae61e20
+Status: Downloaded newer image for harbor.localtest.me:8443/demo/audit-svc:v0.2.0
+harbor.localtest.me:8443/demo/audit-svc:v0.2.0
+```
+
 
 ### 3. Развёртывание из CI и перечитывание конфига
 
