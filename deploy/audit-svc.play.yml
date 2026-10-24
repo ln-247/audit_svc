@@ -45,7 +45,7 @@
         name: audit_svc
         password: "{{ audit_svc_password | string }}"
         state: present
-        login_host: "{{ postgres_container.container.NetworkSettings.Networks.audit.IPAddress.IPAddress }}"
+        login_host: "{{ postgres_container.container.NetworkSettings.Networks.audit.IPAddress }}"
         login_user: postgres
         login_password: "{{ postgres_admin_password | string }}"
       no_log: true
