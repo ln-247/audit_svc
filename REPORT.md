@@ -1466,6 +1466,69 @@ $ANSIBLE_VAULT;1.1;AES256
 # HELP audit_config_reloads_total Перечитывания конфигурации
 # TYPE audit_config_reloads_total counter
 ```
+Исходное состояние зафиксировано
+
+Изменим пароль в Vault
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ EDITOR=nano ansible-vault edit deploy/inventories/prom/group_vars/all/vault.yml
+Vault password: 
+
+```
+
+Сравним образ с работающим контейнером
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ audit_candidate="harbor.localtest.me:8443/demo/audit-svc:main_$(git rev-parse --short=8 HEAD)"
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -u gitlab-runner deploy-vm docker pull "$audit_candidate"
+main_1f3ac291: Pulling from demo/audit-svc
+Digest: sha256:097a11a388c31976510d857c648dd698a86846996b55927869ee910cc4b60700
+Status: Downloaded newer image for harbor.localtest.me:8443/demo/audit-svc:main_1f3ac291
+harbor.localtest.me:8443/demo/audit-svc:main_1f3ac291
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker inspect -f '{{.Image}}' audit-svc
+sha256:097a11a388c31976510d857c648dd698a86846996b55927869ee910cc4b60700
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker image inspect -f '{{.Id}}' "$audit_candidate"
+sha256:097a11a388c31976510d857c648dd698a86846996b55927869ee910cc4b60700
+```
+Оба sha256 совпали. Работающий контейнер и новый образ main_1f3ac291 используют одинаковый образ. Изменение Vault и плейбука не изменило результат сборки приложения.
+
+Создадим новый тег v0.4.0
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git tag v0.4.0
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab v0.4.0
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To http://gitlab.localtest.me:8929/demo/audit-svc.git
+ * [new tag]         v0.4.0 -> v0.4.0
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push origin v0.4.0
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To github.com:ln-247/audit_svc.git
+ * [new tag]         v0.4.0 -> v0.4.0
+```
+Проверим развертывание и результат смены пароля
+![alt text](screenshots/image-13.png)
+
+![alt text](screenshots/image-14.png)
+
+Пооверим, что время совпадает с исходным
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker inspect -f '{{.State.StartedAt}}' audit-svc
+2026-10-24T17:52:55.975724645Z
+```
+
+Проверим сообщение о переподключении, счетчик reload идоступность базы через сервис
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker inspect -f '{{.State.StartedAt}}' audit-svc
+2026-10-24T17:52:55.975724645Z
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker logs audit-svc 2>&1 | grep -F 'config reloaded, reconnected to the database'
+2026-10-24 20:15:49,839 [INFO] audit_svc.main: config reloaded, reconnected to the database
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm curl -fsS "http://$audit_svc_ip:8080/metrics" | grep audit_config_reloads_total
+# HELP audit_config_reloads_total Перечитывания конфигурации
+# TYPE audit_config_reloads_total counter
+audit_config_reloads_total{result="success"} 1.0
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm curl -s -w '\nHTTP %{http_code}\n' "http://$audit_svc_ip:8080/healthz"
+{"status": "ok"}
+HTTP 200
+
+```
+Смена пароля без перезапуска подтверждена 🎉
 
 #### 3.4. Идемпотентность
 
