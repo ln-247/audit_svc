@@ -1,7 +1,7 @@
 ## Итоговая работа: развёртывание и мониторинг audit-svc
 
 ### 1. Сборка и публикация образа в CI
-#### 1. Dockerfile
+#### 1.1. Dockerfile
 Проверим что Docker установлен
 ```
 (.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker version
@@ -414,7 +414,7 @@ uid=65534(nobody) gid=65534(nogroup) groups=65534(nogroup)
 ```
 Все проверки прошли успешно. Контейнер работает от nobody, и все три команды присутствуют в образе!
 
-#### 2. Пайплайн на ветке по умолчанию
+#### 1.2. Пайплайн на ветке по умолчанию
 
 Пояснения. В этом пункте мы настроиваем автоматическую проверку и сборку нашего проекта. Я меняю код, делаю коммит и отправляю его в main. 
 После этого автоматически выполнятся
@@ -620,7 +620,7 @@ To http://gitlab.localtest.me:8929/demo/audit-svc.git
 
 ![alt text](screenshots/image-1.png)
 
-#### 3. Пайплайн на защищённом теге
+#### 1.3. Пайплайн на защищённом теге
 Создала тег v* в Protected tags нашего репозитория на Гитлабе. 
 
 Подготовка deploy-vm
@@ -972,7 +972,7 @@ To github.com:ln-247/audit_svc.git
 На данный момент публикация проверена, раннер развертывания зарегистрирован, Ansible установлен и проверен.
 
 ### 2. База данных и секреты
-#### 1. PostgreSQL
+#### 2.1. PostgreSQL
 
 Добавила плейбук audit-svc.play.yml который создает том, сеть, контейнер. Здесь порт наружу не публикуется и no_log нужен, чтобы пароль не попал в вывод
 
@@ -1008,7 +1008,7 @@ volume audit_postgres_data -> /var/lib/postgresql/data
 ```
 После последней команды ничего не вывелось, она должна была вывести опубликованные порты, но у нас их нет.
 
-#### 2. БД и пользователь
+#### 2.2. БД и пользователь
 Cоздадим пользователя PostgreSQL audit_svc и базу данных audit
 
 ```
@@ -1082,7 +1082,7 @@ deploy-vm                  : ok=6    changed=0    unreachable=0    failed=0    s
 ```
 Повторный запуск плейбука завершился успешно. Ура!
 
-#### 3. Секреты
+#### 2.3. Секреты
 Создадим файл и зашифруем там наши пароли, также установим пароль для Ansible Vault
 ```
 (.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ EDITOR="code --wait" ansible-vault create deploy/inventories/prom/group_vars/all/vault.yml
@@ -1137,7 +1137,7 @@ deploy-vm                  : ok=6    changed=0    unreachable=0    failed=0    s
 Все завершилось успешно!
 
 
-#### 4. Ключ ansible-vault в CI
+#### 2.4. Ключ ansible-vault в CI
 
 Создала переменную ANSIBLE_VAULT_PASSWORD_FILE типа File с параметрами Masked и Protected в настройках Ansible Vault
 Также настроила  в .gitlab-ci.yml автоматический запуск нашего плейбука на deploy-vm. Пароль для расшифровки vault.yml берется из переменной GitLab и передаётся Ansible через --vault-password-file
@@ -1392,11 +1392,83 @@ deploy-vm                  : ok=8    changed=0    unreachable=0    failed=0    s
 Первый запуск применил миграции (changed=1), повторный завершился без изменений (ok=8, changed=0, failed=0). Ура!
 
 
-
-
 ### 3. Развёртывание из CI и перечитывание конфига
+#### 3.1. Задача развёртывания
+Закрепила версии коллекций и базовый образ. В задачу развертывания CI добавила установку коллекций из requirements.yml. Также добавила установку коллекций из requirements.yml
+
+![alt text](screenshots/image-9.png)
+
+![alt text](screenshots/image-10.png)
+
+После изменений сборка ветки main прошла успешно и задача Publish Package собрала и опубликовала образ в Harbor
+Также запушила тег v0.3.0
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git tag v0.3.0
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab v0.3.0
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To http://gitlab.localtest.me:8929/demo/audit-svc.git
+ * [new tag]         v0.3.0 -> v0.3.0
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ 
+```
+Проверим pipeline тега v0.3.0
+
+![alt text](screenshots/image-11.png)
+
+![alt text](screenshots/image-12.png)
+
+Проверим образ запущенного контейнера
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker ps --filter name=audit-svc --format '{{.Names}} | {{.Image}} | {{.Status}}'
+audit-svc | harbor.localtest.me:8443/demo/audit-svc:v0.3.0 | Up 4 minutes
+```
+Плейбук выполнился без ошибок и статус Up!
+#### 3.2. Конфиг из шаблона
+Проверим права файла
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm stat -c '%a %u:%g %n' /data/audit-svc/config/config.yaml
+600 65534:65534 /data/audit-svc/config/config.yaml
+```
+То что config.yaml сервиса генерируется модулем template прописала в Create audit-svc config
+```
+- name: Create audit-svc config
+  become: true
+  ansible.builtin.template:
+    src: templates/config.yaml.j2
+    dest: /data/audit-svc/config/config.yaml
+    owner: "65534"
+    group: "65534"
+    mode: "0600"
+  no_log: true
+```
+
+Здесь в config.yaml.j2 прописано, что пароль подставляется из переменной, а не записан прямо в шаблоне
+```
+password: {{ audit_svc_password | string | to_json }}
+```
+
+Файл с секретами зашифрован
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ head -n 1 deploy/inventories/prom/group_vars/all/vault.yml
+$ANSIBLE_VAULT;1.1;AES256
+```
+#### 3.3. Перечитывание вместо перезапуска
+
+#### 3.4. Идемпотентность
+
 
 ### 4. Nginx и nginx-exporter
+#### 4.1. Доступ только через Nginx
+
+#### 4.2. /reload закрыт
+
+#### 4.3. nginx-exporter
+
 
 ### 5. Prometheus и дашборды в Grafana
+#### 5.1. Сбор метрик
 
+#### 5.2. Нагрузка
+
+#### 5.3. Дашборд сервиса
+
+#### 5.4. Дашборд Nginx
