@@ -1539,7 +1539,46 @@ HTTP 200
 ### 4. Nginx и nginx-exporter
 #### 4.1. Доступ только через Nginx
 
-Создадим Docker-сеть
+Создала Docker-сеть, подключила временный контейнер миграций и для Nginx создала конфиг и добавила его запуск в плейбук. Затем развернула через CI
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git add .
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git commit -m "update final_hw 4.1"
+[main c8c9a0d] update final_hw 4.1
+ 4 files changed, 74 insertions(+), 5 deletions(-)
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push origin main
+Перечисление объектов: 15, готово.
+Подсчет объектов: 100% (15/15), готово.
+При сжатии изменений используется до 2 потоков
+Сжатие объектов: 100% (8/8), готово.
+Запись объектов: 100% (8/8), 1.29 KiB | 1.29 MiB/s, готово.
+Total 8 (delta 4), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
+To github.com:ln-247/audit_svc.git
+   894060e..c8c9a0d  main -> main
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab main
+Перечисление объектов: 27, готово.
+Подсчет объектов: 100% (27/27), готово.
+При сжатии изменений используется до 2 потоков
+Сжатие объектов: 100% (19/19), готово.
+Запись объектов: 100% (19/19), 1.25 MiB | 2.13 MiB/s, готово.
+Total 19 (delta 10), reused 0 (delta 0), pack-reused 0 (from 0)
+To http://gitlab.localtest.me:8929/demo/audit-svc.git
+   1f3ac29..c8c9a0d  main -> main
+```
+
+Теперь создадим тег v0.5.0
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git tag v0.5.0
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab v0.5.0
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To http://gitlab.localtest.me:8929/demo/audit-svc.git
+ * [new tag]         v0.5.0 -> v0.5.0
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push origin v0.5.0
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To github.com:ln-247/audit_svc.git
+ * [new tag]         v0.5.0 -> v0.5.0
+```
+
 
 
 
