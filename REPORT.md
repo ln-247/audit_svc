@@ -1453,6 +1453,20 @@ $ANSIBLE_VAULT;1.1;AES256
 ```
 #### 3.3. Перечитывание вместо перезапуска
 
+Сохраним исходное состояние до изменения пароля
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker inspect -f '{{.State.StartedAt}}' audit-svc
+2026-10-24T17:52:55.975724645Z
+```
+
+Затем получим внутренний адрес сервиса и текущее значение метрики
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ audit_svc_ip=$(docker exec deploy-vm docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' audit-svc)
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm curl -fsS "http://$audit_svc_ip:8080/metrics" | grep audit_config_reloads_total
+# HELP audit_config_reloads_total Перечитывания конфигурации
+# TYPE audit_config_reloads_total counter
+```
+
 #### 3.4. Идемпотентность
 
 

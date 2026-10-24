@@ -69,6 +69,7 @@
         group: "65534"
         mode: "0600"
       no_log: true
+      notify: Reload audit-svc
     
     - name: Run database migrations
       ansible.builtin.command:
@@ -90,6 +91,9 @@
           - /data/audit-svc/config:/etc/audit-svc:ro
       register: audit_container
 
+    - name: Apply config changes #выполняет ожидающий хендлер перед проверкой готовности
+      ansible.builtin.meta: flush_handlers
+
     - name: Wait for audit-svc
       ansible.builtin.uri:
         url: "http://{{ audit_container.container.NetworkSettings.Networks.bridge.IPAddress }}:8080/healthz"
@@ -99,3 +103,15 @@
       retries: 20
       delay: 2
       changed_when: false
+
+  handlers: #отправляет HTTP-запрос внутри deploy-vm
+    - name: Reload audit-svc
+      ansible.builtin.uri:
+        url: "http://{{ audit_container.container.NetworkSettings.Networks.bridge.IPAddress }}:8080/reload"
+        method: POST
+        status_code: 200
+      register: audit_reload
+      until: audit_reload.status == 200
+      retries: 20
+      delay: 2
+      changed_when: audit_reload.json.changed | default(false)
