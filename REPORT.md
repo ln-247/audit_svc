@@ -1566,26 +1566,56 @@ To http://gitlab.localtest.me:8929/demo/audit-svc.git
    1f3ac29..c8c9a0d  main -> main
 ```
 
-Теперь создадим тег v0.5.1
+Теперь создадим тег v0.5.3
 ```
-(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git tag v0.5.2
-(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab v0.5.2
-Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
-To http://gitlab.localtest.me:8929/demo/audit-svc.git
- * [new tag]         v0.5.2 -> v0.5.2
-(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push origin v0.5.2
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git tag v0.5.3
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push origin v0.5.3
 Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
 To github.com:ln-247/audit_svc.git
- * [new tag]         v0.5.2 -> v0.5.2
+ * [new tag]         v0.5.3 -> v0.5.3
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab v0.5.3
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To http://gitlab.localtest.me:8929/demo/audit-svc.git
+ * [new tag]         v0.5.3 -> v0.5.3
+```
+![alt text](screenshots/image-16.png)
+
+![alt text](screenshots/image-17.png)
+
+Все прошло успешно
+
+Проверим результат
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ curl -s -w '\nHTTP %{http_code}\n' http://localhost:8088/healthz
+{"status": "ok"}
+HTTP 200
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker ps --format '{{.Names}}\t{{.Ports}}'
+nginx   80/tcp, 0.0.0.0:8080->8080/tcp
+audit-svc       8080/tcp
+audit-postgres  5432/tcp
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker network inspect audit --format '{{range .Containers}}{{println .Name}}{{end}}'
+audit-postgres
+nginx
+audit-svc
 ```
 
-
-
-
-
-
-
 #### 4.2. /reload закрыт
+Посчитаем сообщения о reload и сделаем проверки
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devopsdocker exec deploy-vm docker logs audit-svc 2>&1 | grep -c 'config reload' 'config reload'
+1
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ curl -s -o /dev/null -w '%{http_code}\n' -X POST localhost:8088/reload
+404
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ curl -s -o /dev/null -w '%{http_code}\n' -X POST 'localhost:8088/reload?x=1'
+404
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ curl -s -o /dev/null -w '%{http_code}\n' -X POST localhost:8088//reload
+404
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ curl -s -o /dev/null -w '%{http_code}\n' -X POST localhost:8088/%72eload
+404
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker logs audit-svc 2>&1 | grep -c 'config reload'
+1
+```
+После запросов осталось 1 сообщение, то есть нового перечитывания конфига не произошло
 
 #### 4.3. nginx-exporter
 
