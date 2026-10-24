@@ -1566,17 +1566,17 @@ To http://gitlab.localtest.me:8929/demo/audit-svc.git
    1f3ac29..c8c9a0d  main -> main
 ```
 
-Теперь создадим тег v0.5.0
+Теперь создадим тег v0.5.1
 ```
-(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git tag v0.5.0
-(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab v0.5.0
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git tag v0.5.1
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab v0.5.1
 Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
 To http://gitlab.localtest.me:8929/demo/audit-svc.git
- * [new tag]         v0.5.0 -> v0.5.0
-(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push origin v0.5.0
+ * [new tag]         v0.5.1 -> v0.5.1
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push origin v0.5.1
 Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
 To github.com:ln-247/audit_svc.git
- * [new tag]         v0.5.0 -> v0.5.0
+ * [new tag]         v0.5.1 -> v0.5.1
 ```
 
 

@@ -15,7 +15,7 @@
         name: audit_postgres_data
         state: present
 
-        - name: Start PostgreSQL container
+    - name: Start PostgreSQL container
       community.docker.docker_container:
         name: audit-postgres
         image: postgres:17
