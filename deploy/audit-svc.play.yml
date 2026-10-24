@@ -51,11 +51,20 @@
         login_password: "{{ postgres_admin_password | string }}"
       no_log: true
 
+    - name: Create audit-svc config directory
+      become: true
+      ansible.builtin.file:
+        path: /data/audit-svc/config
+        state: directory
+        owner: "65534"
+        group: "65534"
+        mode: "0750"
+
     - name: Create audit-svc config
       become: true
       ansible.builtin.template:
         src: templates/config.yaml.j2
-        dest: /data/audit-svc/config.yaml
+        dest: /data/audit-svc/config/config.yaml
         owner: "65534" #пользователь nobody
         group: "65534"
         mode: "0600"
@@ -66,7 +75,27 @@
         cmd: >-
           docker run --rm
           --entrypoint migrate
-          --volume /data/audit-svc/config.yaml:/etc/audit-svc/config.yaml:ro
+          --volume /data/audit-svc/config:/etc/audit-svc:ro
           {{ audit_image }}
       register: migration_result
       changed_when: "'done: 0 applied,' not in migration_result.stderr"
+
+    - name: Start audit-svc
+      community.docker.docker_container:
+        name: audit-svc
+        image: "{{ audit_image }}"
+        image_name_mismatch: ignore #позволяет оставить контейнер работающим, если поменялся только тег, а сам образ одинаковый
+        state: started
+        volumes:
+          - /data/audit-svc/config:/etc/audit-svc:ro
+      register: audit_container
+
+    - name: Wait for audit-svc
+      ansible.builtin.uri:
+        url: "http://{{ audit_container.container.NetworkSettings.Networks.bridge.IPAddress }}:8080/healthz"
+        status_code: 200
+      register: audit_health
+      until: audit_health.status == 200 #ответ 200 означает, что сервис работает и видит PostgreSQL
+      retries: 20
+      delay: 2
+      changed_when: false

@@ -14,6 +14,9 @@ variables:
 
 Deploy Job: #запускает плейбук развёртывания audit-svc      
   stage: deploy
+  environment:
+    name: production
+    url: http://localhost:8088
   tags:
     - deploy
   variables:
