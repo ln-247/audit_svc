@@ -1539,6 +1539,13 @@ HTTP 200
 ### 4. Nginx и nginx-exporter
 #### 4.1. Доступ только через Nginx
 
+Создадим Docker-сеть
+
+
+
+
+
+
 #### 4.2. /reload закрыт
 
 #### 4.3. nginx-exporter

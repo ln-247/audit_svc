@@ -5,6 +5,11 @@
     audit_image: "harbor.localtest.me:8443/demo/audit-svc:{{ release_tag }}"
 
   tasks:
+    - name: Create audit network
+      community.docker.docker_network:
+        name: audit
+        state: present
+
     - name: Create PostgreSQL data volume
       community.docker.docker_volume:
         name: audit_postgres_data
@@ -20,6 +25,10 @@
         volumes:
           - audit_postgres_data:/var/lib/postgresql/data
       register: postgres_container
+      networks:
+        - name: audit
+      comparisons:
+        networks: strict
       no_log: true
 
     - name: Wait for PostgreSQL #проверка готов ли PostgreSQL принимать подключения
@@ -36,7 +45,7 @@
         name: audit_svc
         password: "{{ audit_svc_password | string }}"
         state: present
-        login_host: "{{ postgres_container.container.NetworkSettings.Networks.bridge.IPAddress }}"
+        login_host: "{{ postgres_container.container.NetworkSettings.Networks.audit.IPAddress.IPAddress }}"
         login_user: postgres
         login_password: "{{ postgres_admin_password | string }}"
       no_log: true
@@ -46,7 +55,7 @@
         name: audit
         owner: audit_svc
         state: present
-        login_host: "{{ postgres_container.container.NetworkSettings.Networks.bridge.IPAddress }}"
+        login_host: "{{ postgres_container.container.NetworkSettings.Networks.audit.IPAddress }}"
         login_user: postgres
         login_password: "{{ postgres_admin_password | string }}"
       no_log: true
@@ -75,6 +84,7 @@
       ansible.builtin.command:
         cmd: >-
           docker run --rm
+          --network audit
           --entrypoint migrate
           --volume /data/audit-svc/config:/etc/audit-svc:ro
           {{ audit_image }}
@@ -89,6 +99,10 @@
         state: started
         volumes:
           - /data/audit-svc/config:/etc/audit-svc:ro
+        networks:
+          - name: audit
+        comparisons:
+          networks: strict #оставляет контейнеру только указанную сеть
       register: audit_container
 
     - name: Apply config changes #выполняет ожидающий хендлер перед проверкой готовности
@@ -96,7 +110,7 @@
 
     - name: Wait for audit-svc
       ansible.builtin.uri:
-        url: "http://{{ audit_container.container.NetworkSettings.Networks.bridge.IPAddress }}:8080/healthz"
+        url: "http://{{ audit_container.container.NetworkSettings.Networks.audit.IPAddress }}:8080/healthz"
         status_code: 200
       register: audit_health
       until: audit_health.status == 200 #ответ 200 означает, что сервис работает и видит PostgreSQL
@@ -104,10 +118,40 @@
       delay: 2
       changed_when: false
 
+    - name: Create nginx config directory
+      become: true
+      ansible.builtin.file:
+        path: /data/audit-svc/nginx
+        state: directory
+        mode: "0755"
+
+    - name: Create nginx config
+      become: true
+      ansible.builtin.template:
+        src: templates/nginx.conf.j2
+        dest: /data/audit-svc/nginx/nginx.conf
+        mode: "0644"
+      register: nginx_config
+
+    - name: Start nginx
+      community.docker.docker_container:
+        name: nginx
+        image: nginx:1.28-alpine
+        state: started
+        networks:
+          - name: audit
+        comparisons:
+          networks: strict
+        published_ports:
+          - "8080:8080"
+        volumes:
+          - /data/audit-svc/nginx:/etc/nginx:ro
+        restart: "{{ nginx_config.changed }}"
+
   handlers: #отправляет HTTP-запрос внутри deploy-vm
     - name: Reload audit-svc
       ansible.builtin.uri:
-        url: "http://{{ audit_container.container.NetworkSettings.Networks.bridge.IPAddress }}:8080/reload"
+        url: "http://{{ audit_container.container.NetworkSettings.Networks.audit.IPAddress }}:8080/reload"
         method: POST
         status_code: 200
       register: audit_reload

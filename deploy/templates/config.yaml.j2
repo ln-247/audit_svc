@@ -1,5 +1,5 @@
 database:
-  host: "{{ postgres_container.container.NetworkSettings.Networks.bridge.IPAddress }}"
+  host: audit-postgres
   port: 5432
   name: audit
   user: audit_svc
