@@ -417,7 +417,7 @@ uid=65534(nobody) gid=65534(nogroup) groups=65534(nogroup)
 #### 1.2. Пайплайн на ветке по умолчанию
 
 Пояснения. В этом пункте мы настроиваем автоматическую проверку и сборку нашего проекта. Я меняю код, делаю коммит и отправляю его в main. 
-После этого автоматически выполнятся
+После этого автоматически выполнятся  
 - тесты и здесь раннер запускает poetry run pytest. Результаты сохраняются ещё и в формате JUnit, чтобы GitLab мог показать, какие тесты прошли и какие упали.
 - если тесты прошли, по подготовленному Dockerfile соберется Docker-образ
 - образ отправится в Harbor
@@ -567,7 +567,7 @@ Harbor:   https://harbor.localtest.me:8443/harbor/projects
 
 Подняли контейнеры стенда, включая GitLab и Harbor и настроили их
 
-Зайдем на GitLab с паролем для root из вывода и создадим отдельный проект для audit-svc
+Зайдем на GitLab с паролем для root из вывода и создадим отдельный проект для audit-svc  
 Затем выльем все на гитхаб и гитлаб. Для гитлаба нужно было ввести логин и пароль из вывода для root во всплывающем поле ввода 
 ```
 
@@ -605,7 +605,7 @@ To http://gitlab.localtest.me:8929/demo/audit-svc.git
 
 ![Скриншот результата для пайплайна](screenshots/main_pipeline_5.png)
 
-Тесты (poetry run pytest, отчёт JUnit) (пояснения)
+Тесты (poetry run pytest, отчёт JUnit) (пояснения)  
 В задаче Run Tests выполняется команда poetry run pytest --junitxml python.junit.xml. Она запускает шесть тестов из tests/test_main.py, которые проверяют работу с событиями, обработку некорректных данных, метрики, перечитывание конфигурации и поведение при недоступности базы. Тесты используют имитацию хранилища FakeStorage без настоящей PostgreSQL. 
 
 Все шесть тестов прошли успешно!
@@ -888,7 +888,7 @@ ansible [core 2.16.3]
   jinja version = 3.1.2
   libyaml = True
 ```
-Подключим деплой-раннер исполнителя, который будет запускать Ansible внутри deploy-vm  
+Подключим деплой-раннер исполнителя, который будет запускать Ansible внутри deploy-vm   
 Создала раннера в CI/CD Settings/Register runner. Здесь же хранится токен для раннера
 ```
 (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ read -rsp 'Вставь токен раннера и нажми Enter: ' AUDIT_RUNNER_TOKEN
@@ -915,7 +915,7 @@ Runner registered successfully. Feel free to start it, but if it's running alrea
  
 Configuration (with the authentication token) was saved in "/etc/gitlab-runner/config.toml" 
 ```
-Runner registered successfully. Конфигурация сохранена внутри deploy-vm
+Runner registered successfully. Конфигурация сохранена внутри deploy-vm  
 ![alt text](screenshots/image-3.png)
 
 ```
@@ -971,6 +971,10 @@ To github.com:ln-247/audit_svc.git
 
 На данный момент публикация проверена, раннер развертывания зарегистрирован, Ansible установлен и проверен.
 
+Дополнено.  
+На защищенном теге v0.4.0 образ опубликован с тегом v0.4.0, задача Deploy Job успешно выполнила развертывание.  
+Граф пайплайна и лог развертывания привела в пункте 3
+
 ### 2. База данных и секреты
 #### 2.1. PostgreSQL
 
@@ -996,7 +1000,7 @@ changed: [deploy-vm]
 PLAY RECAP *********************************************************************************************************************************************************************
 deploy-vm                  : ok=3    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
 ```
-Плейбук выполнился успешно, том и контейнер создались, changed=2, failed=0
+Плейбук выполнился успешно, том и контейнер создались, changed=2, failed=0   
 Теперь проверим, что PostgreSQL принимает подключения, данные подключены к нужному тому, а порт не опубликован
 
 ```
@@ -1041,7 +1045,7 @@ changed: [deploy-vm]
 PLAY RECAP *********************************************************************************************************************************************************************
 deploy-vm                  : ok=6    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
 ```
-Плейбук выполнился успешно, создались пользователь и база. Том и контейнер остались без изменений, ошибок нет.
+Плейбук выполнился успешно, создались пользователь и база. Том и контейнер остались без изменений, ошибок нет.  
 Проверим имя базы и её владельца
 ```
 (.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker exec audit-postgres psql -U postgres -d postgres -c "SELECT datname, pg_get_userbyid(datdba) AS owner FROM pg_database WHERE datname = 'audit';"
@@ -1094,7 +1098,7 @@ Confirm New Vault password:
 (.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ head -n 1 deploy/inventories/prom/group_vars/all/vault.yml
 $ANSIBLE_VAULT;1.1;AES256
 ```
-Файл зашифрован
+Файл зашифрован  
 Внесла изменения в плейбук, удалила запросы паролей, теперь Ansible возьмет их из group_vars/all/vault.yml
 ```
 (.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec -it -u gitlab-runner -w /data/audit-svc/deploy deploy-vm ansible-playbook audit-svc.play.yml --ask-vault-pass
@@ -1139,9 +1143,9 @@ deploy-vm                  : ok=6    changed=0    unreachable=0    failed=0    s
 
 #### 2.4. Ключ ansible-vault в CI
 
-Создала переменную ANSIBLE_VAULT_PASSWORD_FILE типа File с параметрами Masked и Protected в настройках Ansible Vault
-Также настроила  в .gitlab-ci.yml автоматический запуск нашего плейбука на deploy-vm. Пароль для расшифровки vault.yml берется из переменной GitLab и передаётся Ansible через --vault-password-file
-Перед созданием тега запушим все на гитхаб и на гитлаб. Затем создадим тег
+Создала переменную ANSIBLE_VAULT_PASSWORD_FILE типа File с параметрами Masked и Protected в настройках Ansible Vault  
+Также настроила  в .gitlab-ci.yml автоматический запуск нашего плейбука на deploy-vm. Пароль для расшифровки vault.yml берется из переменной GitLab и передаётся Ansible через --vault-password-file  
+Перед созданием тега запушим все на гитхаб и на гитлаб. Затем создадим тег  
 ```
 (.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git add .
 (.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git commit -m "update final_hw 2.3-2.4"
@@ -1188,7 +1192,7 @@ docker exec -u root deploy-vm install -d -o gitlab-runner -g gitlab-runner /data
 
 Плейбук на deploy-vm успешно запустился (на теге v0.2.0). Теперь пароль Vault из переменной GitLab можно получить без ручного ввода.
 
-Подготовим схему БД скриптом migrate из образа сервиса
+Подготовим схему БД скриптом migrate из образа сервиса  
 Сначала проверим есть ли образ сервиса внутри deploy-vm
 
 ```
@@ -1400,7 +1404,7 @@ deploy-vm                  : ok=8    changed=0    unreachable=0    failed=0    s
 
 ![alt text](screenshots/image-10.png)
 
-После изменений сборка ветки main прошла успешно и задача Publish Package собрала и опубликовала образ в Harbor
+После изменений сборка ветки main прошла успешно и задача Publish Package собрала и опубликовала образ в Harbor  
 Также запушила тег v0.3.0
 ```
 (.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git tag v0.3.0
@@ -1421,7 +1425,7 @@ To http://gitlab.localtest.me:8929/demo/audit-svc.git
 (.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker ps --filter name=audit-svc --format '{{.Names}} | {{.Image}} | {{.Status}}'
 audit-svc | harbor.localtest.me:8443/demo/audit-svc:v0.3.0 | Up 4 minutes
 ```
-Плейбук выполнился без ошибок и статус Up!
+Плейбук выполнился без ошибок и статус Up!  
 #### 3.2. Конфиг из шаблона
 Проверим права файла
 ```
