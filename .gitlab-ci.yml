@@ -12,7 +12,7 @@ variables:
   - pip install --quiet "poetry==$POETRY_VERSION" "poetry-plugin-export==1.10.0"
   - poetry install --no-interaction
 
-Deploy Job: #обновляет counter-deploy, но нам нужны пока только тесты, сборка и публикация       
+Deploy Job: #запускает плейбук развёртывания audit-svc      
   stage: deploy
   tags:
     - deploy
@@ -21,9 +21,29 @@ Deploy Job: #обновляет counter-deploy, но нам нужны пока 
   needs:
     - job: Publish Package
       artifacts: false #не скачивать файлы, которые задача Publish Package сохранила как артефакты
-  script:
-    - cd deploy
-    - ansible-playbook audit-svc.play.yml --vault-password-file "$ANSIBLE_VAULT_PASSWORD_FILE"
   rules: #разрешить запуск только на защищенном теге 
     - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/ && $CI_COMMIT_REF_PROTECTED == "true"'
+  script:
+    - cd deploy
+    - ansible-galaxy collection install -r requirements.yml
+    - ansible-playbook audit-svc.play.yml --vault-password-file "$ANSIBLE_VAULT_PASSWORD_FILE" -e "release_tag=$CI_COMMIT_TAG"
 
+Publish Package:
+  script:
+    - |
+      test -n "$IMAGE_TAG"
+      b64_auth=$(printf '%s:%s' "$HARBOR_USER" "$HARBOR_PASSWORD" | base64 | tr -d '\n')
+      printf '{"auths":{"%s":{"auth":"%s"}}}' "$HARBOR_HOST" "$b64_auth" > /kaniko/.docker/config.json
+    - >-
+      /kaniko/executor
+      --cache=false
+      --reproducible
+      --skip-unused-stages
+      --context "$CI_PROJECT_DIR"
+      --dockerfile "$CI_PROJECT_DIR/$DOCKERFILE"
+      --destination "$HARBOR_IMAGE:$IMAGE_TAG"
+    - |
+      if [ -n "${IMAGE_OUTPUT_DOTENV_KEY:-}" ]; then
+        key=$(printf '%s' "$IMAGE_OUTPUT_DOTENV_KEY" | tr '-' '_')
+        printf '%s_IMAGE=%s\n' "$key" "$HARBOR_IMAGE:$IMAGE_TAG" > "$IMAGE_OUTPUT_DOTENV_FILE"
+      fi

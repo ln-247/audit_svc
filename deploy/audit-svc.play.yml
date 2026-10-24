@@ -1,6 +1,9 @@
 - name: Run PostgreSQL
   hosts: deploy-vm
 
+  vars:
+    audit_image: "harbor.localtest.me:8443/demo/audit-svc:{{ release_tag }}"
+
   tasks:
     - name: Create PostgreSQL data volume
       community.docker.docker_volume:
@@ -64,6 +67,6 @@
           docker run --rm
           --entrypoint migrate
           --volume /data/audit-svc/config.yaml:/etc/audit-svc/config.yaml:ro
-          harbor.localtest.me:8443/demo/audit-svc:v0.2.0
+          {{ audit_image }}
       register: migration_result
       changed_when: "'done: 0 applied,' not in migration_result.stderr"
