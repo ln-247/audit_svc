@@ -1908,10 +1908,27 @@ To github.com:ln-247/audit_svc.git
 ![alt text](screenshots/image-27.png)
 
 ![alt text](screenshots/image-28.png)
- В логе нет явного вывода результата для 0003... :( Попробуем сделать еще одну попытку. Создам 0004
+В логе нет явного вывода результата для 0003... :( Попробуем сделать еще одну попытку. Создам 0004
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git tag v0.7.1
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab v0.7.1
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To http://gitlab.localtest.me:8929/demo/audit-svc.git
+ * [new tag]         v0.7.1 -> v0.7.1
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push origin v0.7.1
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To github.com:ln-247/audit_svc.git
+ * [new tag]         v0.7.1 -> v0.7.1
+```
 
+![alt text](screenshots/image-29.png)
 
+![alt text](screenshots/image-30.png)
 
-Подтверждено применение 0004_events_actor_index.sql и успешное завершение миграций до запуска обновленного сервиса  
+Ура! Подтверждено применение 0004_events_actor_index.sql и успешное завершение миграций до запуска обновленного сервиса  
 
 Повторно запустим только Deploy Job того же тега
+
+![alt text](screenshots/image-31.png)
+
+Повторная проверка прошла успешно!!!
