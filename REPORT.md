@@ -1671,8 +1671,179 @@ Nginx_up 1 подтверждает, что экспортер успешно ч
 ### 5. Prometheus и дашборды в Grafana
 #### 5.1. Сбор метрик
 
-#### 5.2. Нагрузка
+Остановим тяжелую часть стенда 
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker stop gitlab runner-docker webhook-echo
+gitlab
+runner-docker
+webhook-echo
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker ps -q --filter label=com.docker.compose.project=harbor | xargs -r docker stop
+9b390d0abda6
+def10c68d887
+865880ba0724
+de009156e574
+f1afc436435f
+71927e78bf7f
+0de30c9e9f6c
+529d12ee4fdc
+f3d30ae2f24f
+1ffdbc662b61
+```
 
+Проверим конфигурацию и запустим мониторинг
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ cd monitoring
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ docker compose run --rm --no-deps --entrypoint promtool prometheus check config /etc/prometheus/prometheus.yml
+[+] Creating 2/2
+ ✔ Network audit-monitoring_default         Created                                                                                                       0.1s 
+ ✔ Volume audit-monitoring_prometheus-data  Created                                                                                                       0.0s 
+Checking /etc/prometheus/prometheus.yml
+ SUCCESS: /etc/prometheus/prometheus.yml is valid prometheus config file syntax
+
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ docker compose up -d
+[+] Running 1/3
+ ✔ Volume audit-monitoring_grafana-data     Created                                                                                                       0.0s 
+ ⠦ Container audit-monitoring-prometheus-1  Starting                                                                                                      1.5s 
+ ⠦ Container audit-monitoring-grafana-1     Starting                                                                                                      1.5s 
+Error response from daemon: failed to set up container networking: driver failed programming external connectivity on endpoint audit-monitoring-prometheus-1 (454fc63c71fafea4299e5edc9750c7b979eb39c264e0b908d1644af6410f68eb): Bind for 127.0.0.1:9090 failed: port is already allocated
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ docker ps --filter publish=9090 --format 'table {{.Names}}\t{{.Ports}}'
+NAMES                     PORTS
+monitoring-prometheus-1   127.0.0.1:9090->9090/tcp
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ docker ps --filter publish=3000 --format 'table {{.Names}}\t{{.Ports}}'
+NAMES                  PORTS
+monitoring-grafana-1   127.0.0.1:3000->3000/tcp
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ docker stop monitoring-prometheus-1 monitoring-grafana-1  
+monitoring-prometheus-1
+monitoring-grafana-1
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ docker compose up -d
+[+] Running 2/2
+ ✔ Container audit-monitoring-prometheus-1  Started                                                                                                       0.9s 
+ ✔ Container audit-monitoring-grafana-1     Started                                                                                                       0.5s 
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ docker compose ps
+NAME                            IMAGE                    COMMAND                  SERVICE      CREATED         STATUS          PORTS
+audit-monitoring-grafana-1      grafana/grafana:12.1.0   "/run.sh"                grafana      2 minutes ago   Up 16 seconds   
+audit-monitoring-prometheus-1   prom/prometheus:v3.5.0   "/bin/prometheus --c…"   prometheus   2 minutes ago   Up 16 seconds   127.0.0.1:9090->9090/tcp
+```
+Забыла остановить с прошлой домашки, пришлось освободить занятые порты) Пересоздала мониторинг, потому что из-за занятых портов все создалось криво и не работало, у графаны не появился порт :()
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ docker compose up -d --force-recreate
+[+] Running 2/2
+ ✔ Container audit-monitoring-prometheus-1  Started                                                                                                       2.3s 
+ ✔ Container audit-monitoring-grafana-1     Started                                                                                                       1.6s 
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ docker inspect audit-monitoring-prometheus-1 --format '{{json .NetworkSettings.Networks}}'
+{"audit-monitoring_default":{"IPAMConfig":null,"Links":null,"Aliases":["audit-monitoring-prometheus-1","prometheus"],"DriverOpts":null,"GwPriority":0,"NetworkID":"3318717f8a2da9649c717bf282c65de7dbd40769de48c32ab2f3b639784fd9ee","EndpointID":"b8a730f36d14682126f7ebdc7715cdcdcd98c593877a4aed86de817473a80d4c","Gateway":"172.21.0.1","IPAddress":"172.21.0.3","MacAddress":"26:33:5a:88:55:b2","IPPrefixLen":16,"IPv6Gateway":"","GlobalIPv6Address":"","GlobalIPv6PrefixLen":0,"DNSNames":["audit-monitoring-prometheus-1","prometheus","cde5562a88ff"]},"lab":{"IPAMConfig":null,"Links":null,"Aliases":["audit-monitoring-prometheus-1","prometheus"],"DriverOpts":null,"GwPriority":0,"NetworkID":"545ec022140b4d6f06417e02bfd3dcedab809dfec06dad72a25fc0e344d70979","EndpointID":"94ae9f013c466c54e2012a79aedea33a4f15b9ca1c43cfadc8098a94407d862c","Gateway":"172.18.0.1","IPAddress":"172.18.0.2","MacAddress":"da:78:83:04:d7:3d","IPPrefixLen":16,"IPv6Gateway":"","GlobalIPv6Address":"","GlobalIPv6PrefixLen":0,"DNSNames":["audit-monitoring-prometheus-1","prometheus","cde5562a88ff"]}}
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ docker port audit-monitoring-grafana-1
+3000/tcp -> 127.0.0.1:3000
+```
+![alt text](screenshots/image-20.png)
+
+Теперь все поднялось!
+
+#### 5.2. Нагрузка
+Создадим нагрузку
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ docker exec deploy-vm docker run --rm \
+  --network audit \
+  --entrypoint generate \
+  "$AUDIT_IMAGE_ID" \
+  --url http://nginx:8080 \
+  --duration 600 \
+  --rate 20
+sent 148: {'200': 16, '201': 126, '400': 6}
+sent 309: {'200': 35, '201': 258, '400': 16}
+sent 456: {'200': 46, '201': 386, '400': 24}
+sent 603: {'200': 73, '201': 502, '400': 28}
+sent 755: {'200': 90, '201': 631, '400': 34}
+sent 871: {'200': 100, '201': 735, '400': 36}
+sent 1006: {'200': 111, '201': 855, '400': 40}
+sent 1135: {'200': 127, '201': 966, '400': 42}
+sent 1279: {'200': 138, '201': 1092, '400': 49}
+sent 1415: {'200': 151, '201': 1212, '400': 52}
+sent 1587: {'200': 176, '201': 1356, '400': 55}
+sent 1735: {'200': 194, '201': 1483, '400': 58}
+sent 1865: {'200': 204, '201': 1601, '400': 60}
+sent 2024: {'200': 220, '201': 1735, '400': 69}
+sent 2204: {'200': 234, '201': 1891, '400': 79}
+sent 2371: {'200': 254, '201': 2033, '400': 84}
+sent 2467: {'200': 267, '201': 2112, '400': 88}
+sent 2616: {'200': 284, '201': 2238, '400': 94}
+sent 2788: {'200': 306, '201': 2383, '400': 99}
+sent 2942: {'200': 315, '201': 2522, '400': 105}
+sent 3100: {'200': 327, '201': 2664, '400': 109}
+sent 3263: {'200': 342, '201': 2800, '400': 121}
+sent 3407: {'200': 358, '201': 2925, '400': 124}
+sent 3553: {'200': 376, '201': 3039, '400': 138}
+sent 3712: {'200': 394, '201': 3169, '400': 149}
+sent 3868: {'200': 413, '201': 3302, '400': 153}
+sent 4031: {'200': 424, '201': 3446, '400': 161}
+sent 4194: {'200': 432, '201': 3593, '400': 169}
+sent 4366: {'200': 448, '201': 3746, '400': 172}
+sent 4521: {'200': 462, '201': 3881, '400': 178}
+sent 4654: {'200': 471, '201': 3997, '400': 186}
+sent 4798: {'200': 489, '201': 4114, '400': 195}
+sent 4962: {'200': 501, '201': 4261, '400': 200}
+sent 5117: {'200': 523, '201': 4385, '400': 209}
+sent 5268: {'200': 540, '201': 4511, '400': 217}
+sent 5430: {'200': 554, '201': 4649, '400': 227}
+sent 5608: {'200': 576, '201': 4797, '400': 235}
+sent 5764: {'200': 600, '201': 4922, '400': 242}
+sent 5942: {'200': 623, '201': 5070, '400': 249}
+sent 6099: {'200': 640, '201': 5203, '400': 256}
+sent 6274: {'200': 662, '201': 5347, '400': 265}
+sent 6441: {'200': 678, '201': 5489, '400': 274}
+sent 6579: {'200': 690, '201': 5612, '400': 277}
+sent 6755: {'200': 707, '201': 5759, '400': 289}
+sent 6930: {'200': 725, '201': 5909, '400': 296}
+sent 7110: {'200': 750, '201': 6056, '400': 304}
+sent 7291: {'200': 768, '201': 6212, '400': 311}
+sent 7427: {'200': 781, '201': 6331, '400': 315}
+sent 7606: {'200': 802, '201': 6481, '400': 323}
+sent 7785: {'200': 820, '201': 6630, '400': 335}
+sent 7966: {'200': 840, '201': 6776, '400': 350}
+sent 8151: {'200': 854, '201': 6935, '400': 362}
+sent 8319: {'200': 869, '201': 7084, '400': 366}
+sent 8432: {'200': 883, '201': 7179, '400': 370}
+sent 8570: {'200': 898, '201': 7297, '400': 375}
+sent 8706: {'200': 903, '201': 7414, '400': 389}
+sent 8854: {'200': 914, '201': 7541, '400': 399}
+sent 8993: {'200': 923, '201': 7666, '400': 404}
+sent 9153: {'200': 936, '201': 7805, '400': 412}
+total 9279: {'200': 948, '201': 7914, '400': 417}
+```
 #### 5.3. Дашборд сервиса
+Подключила Prometheus к Grafana
+
+![alt text](screenshots/image-21.png)
+
+Создала дашборд с тремя панелями
+![alt text](screenshots/image-22.png)
+
+Проверим остановку и восстановление
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ docker exec deploy-vm docker stop audit-svc
+audit-svc
+```
+![alt text](screenshots/image-23.png)
+
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ docker exec deploy-vm docker start audit-svc
+audit-svc
+```
+![alt text](screenshots/image-24.png)
+
+После остановки контейнера индикатор сменился на DOWN, после запуска вернулся в UP  
+Сохранила JSON всего дашборда с тремя панелями в audit-svc.json
 
 #### 5.4. Дашборд Nginx
+
+Импортировала дашборд Nginx
+![alt text](screenshots/image-25.png)
+
+![alt text](screenshots/image-26.png)
+
+#### Бонусное задание
+
+```
+
+```
+
