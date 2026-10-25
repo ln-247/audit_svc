@@ -148,6 +148,20 @@
           - /data/audit-svc/nginx:/etc/nginx:ro
         restart: "{{ nginx_config.changed }}"
 
+    - name: Start nginx exporter
+      community.docker.docker_container:
+        name: nginx-exporter
+        image: nginx/nginx-prometheus-exporter:1.4
+        state: started
+        command:
+          - "--nginx.scrape-uri=http://nginx:8081/stub_status" #указывает, откуда читать статистику
+        networks:
+          - name: audit
+        comparisons:
+          networks: strict
+        published_ports:
+          - "9113:9113"
+
   handlers: #отправляет HTTP-запрос внутри deploy-vm
     - name: Reload audit-svc
       ansible.builtin.uri:
