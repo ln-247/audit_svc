@@ -1622,7 +1622,51 @@ audit-svc
 После запросов осталось 1 сообщение, то есть нового перечитывания конфига не произошло
 
 #### 4.3. nginx-exporter
+В deploy/templates/nginx.conf.j2 добавила внутренний порт 8081 со страницей статистики Nginx /stub_status. Этот порт не публикуется наружу  
+Также в плейбук добавила задачу запуска контейнера nginx-exporter в сети audit  
+Выпустим v0.6.0
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git tag v0.6.0
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab v0.6.0
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To http://gitlab.localtest.me:8929/demo/audit-svc.git
+ * [new tag]         v0.6.0 -> v0.6.0
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push origin v0.6.0
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To github.com:ln-247/audit_svc.git
+ * [new tag]         v0.6.0 -> v0.6.0
+```
 
+![alt text](screenshots/image-18.png)
+
+![alt text](screenshots/image-19.png)
+
+Теперь проверим метрики
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm curl -fsS http://localhost:9113/metrics | grep '^nginx_up'
+nginx_up 1
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm curl -fsS http://localhost:9113/metrics | grep '^nginx_'
+nginx_connections_accepted 1
+nginx_connections_active 1
+nginx_connections_handled 1
+nginx_connections_reading 0
+nginx_connections_waiting 0
+nginx_connections_writing 1
+nginx_exporter_build_info{branch="HEAD",goarch="amd64",goos="linux",goversion="go1.24.2",revision="ced6fda825f88077debfacab8d82536ce502bb17",tags="unknown",version="1.4.2"} 1
+nginx_http_requests_total 2
+nginx_up 1
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8088/stub_status
+404
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ curl -s -w '\nHTTP %{http_code}\n' http://localhost:8088/healthz
+{"status": "ok"}
+HTTP 200
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ docker exec deploy-vm docker ps --format '{{.Names}}\t{{.Ports}}'
+nginx-exporter  0.0.0.0:9113->9113/tcp
+nginx   80/tcp, 0.0.0.0:8080->8080/tcp
+audit-svc       8080/tcp
+audit-postgres  5432/tcp
+```
+Nginx_up 1 подтверждает, что экспортер успешно читает статистику Nginx. Через внешний порт /stub_status возвращает 404, а /healthz 200. Опубликованы только порты Nginx и экспортера, внутренний 8081 наружу не выставлен.
 
 ### 5. Prometheus и дашборды в Grafana
 #### 5.1. Сбор метрик
