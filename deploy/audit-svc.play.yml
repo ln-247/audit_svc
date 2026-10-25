@@ -91,6 +91,10 @@
       register: migration_result
       changed_when: "'done: 0 applied,' not in migration_result.stderr"
 
+    - name: Show migration result
+      ansible.builtin.debug:
+        var: migration_result.stderr_lines
+
     - name: Start audit-svc
       community.docker.docker_container:
         name: audit-svc

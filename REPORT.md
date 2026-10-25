@@ -1843,7 +1843,75 @@ audit-svc
 
 #### Бонусное задание
 
+Остановим мониторинг
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ docker compose stop
+[+] Stopping 2/2
+ ✔ Container audit-monitoring-prometheus-1  Stopped                                                                                                       0.9s 
+ ✔ Container audit-monitoring-grafana-1     Stopped     
 ```
 
+Запустим стенд
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc/monitoring$ cd ~/vs_code/devops2_hw/stand_final_hw
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/stand_final_hw$ ./scripts/10-up.sh
+==> GitLab, runner-docker, deploy-vm, webhook-echo
+[+] Running 4/4
+ ✔ Container deploy-vm      Running                                                                                                                       0.0s 
+ ✔ Container gitlab         Started                                                                                                                       0.9s 
+ ✔ Container runner-docker  Started                                                                                                                       0.8s 
+ ✔ Container webhook-echo   Started                                                                                                                       1.0s 
+==> Harbor
+ Container harbor-log Starting 
+ Container harbor-log Started 
+ Container harbor-db Starting 
+ Container registryctl Starting 
+ Container harbor-portal Starting 
+ Container registry Starting 
+ Container redis Starting 
+ Container harbor-db Started 
+ Container registryctl Started 
+ Container harbor-portal Started 
+ Container registry Started 
+ Container redis Started 
+ Container harbor-core Starting 
+ Container trivy-adapter Starting 
+ Container harbor-core Started 
+ Container harbor-jobservice Starting 
+ Container nginx Starting 
+ Container trivy-adapter Started 
+ Container harbor-jobservice Started 
+ Container nginx Started 
+==> Жду: Harbor https://harbor.localtest.me:8443 (до 300 с)
+==> Готово: Harbor https://harbor.localtest.me:8443 (0 с)
+==> Жду: GitLab http://gitlab.localtest.me:8929 (первый старт — 3–5 минут) (до 900 с)
+==> Готово: GitLab http://gitlab.localtest.me:8929 (первый старт — 3–5 минут) (98 с)
+
+GitLab:  http://gitlab.localtest.me:8929        root / Zq8-Mirt-Volg-4417
+Harbor:  https://harbor.localtest.me:8443      admin / Lab4-Harbor-2026
+Первый раз после этого запустите scripts/20-bootstrap.sh
 ```
 
+Создадим тег
+```
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git tag v0.7.0
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push gitlab v0.7.0
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To http://gitlab.localtest.me:8929/demo/audit-svc.git
+ * [new tag]         v0.7.0 -> v0.7.0
+(.venv) (base) user@Ubuntu-desktop:~/vs_code/devops2_hw/audit_svc$ git push origin v0.7.0
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0 (from 0)
+To github.com:ln-247/audit_svc.git
+ * [new tag]         v0.7.0 -> v0.7.0
+```
+
+![alt text](screenshots/image-27.png)
+
+![alt text](screenshots/image-28.png)
+ В логе нет явного вывода результата для 0003... :( Попробуем сделать еще одну попытку. Создам 0004
+
+
+
+Подтверждено применение 0004_events_actor_index.sql и успешное завершение миграций до запуска обновленного сервиса  
+
+Повторно запустим только Deploy Job того же тега

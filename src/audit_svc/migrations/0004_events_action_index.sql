@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS events_action_idx ON events (action);
